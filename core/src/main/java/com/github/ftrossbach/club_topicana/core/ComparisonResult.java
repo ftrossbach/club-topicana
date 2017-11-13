@@ -1,3 +1,18 @@
+/**
+ * Copyright © 2017 Florian Troßbach (trossbach@gmail.com)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.github.ftrossbach.club_topicana.core;
 
 import java.util.*;
@@ -15,15 +30,18 @@ public class ComparisonResult {
 
     private final Map<String, Collection<Comparison<String>>> mismatchingConfiguration;
 
-    private ComparisonResult(Set<String> missingTopics, Map<String, Comparison<Integer>> mismatchingReplicationFactor, Map<String, Comparison<Integer>> mismatchingPartitionCount, Map<String, Collection<Comparison<String>>> mismatchingConfiguration) {
+    private final Map<String, Exception> configEvaluationExceptions;
+
+    private ComparisonResult(Set<String> missingTopics, Map<String, Comparison<Integer>> mismatchingReplicationFactor, Map<String, Comparison<Integer>> mismatchingPartitionCount, Map<String, Collection<Comparison<String>>> mismatchingConfiguration, Map<String, Exception> configEvaluationExceptions) {
         this.missingTopics = missingTopics;
         this.mismatchingReplicationFactor = mismatchingReplicationFactor;
         this.mismatchingPartitionCount = mismatchingPartitionCount;
         this.mismatchingConfiguration = mismatchingConfiguration;
+        this.configEvaluationExceptions = configEvaluationExceptions;
     }
 
     public boolean ok(){
-        return !(missingTopics.isEmpty() || mismatchingReplicationFactor.isEmpty() || mismatchingPartitionCount.isEmpty() || mismatchingConfiguration.isEmpty());
+        return !(configEvaluationExceptions.isEmpty() ||missingTopics.isEmpty() || mismatchingReplicationFactor.isEmpty() || mismatchingPartitionCount.isEmpty() || mismatchingConfiguration.isEmpty());
     }
 
     public Set<String> getMissingTopics() {
@@ -42,6 +60,10 @@ public class ComparisonResult {
         return mismatchingConfiguration;
     }
 
+    public Map<String, Exception> getConfigEvaluationExceptions() {
+        return configEvaluationExceptions;
+    }
+
     @Override
     public String toString() {
         return "ComparisonResult{" +
@@ -49,6 +71,7 @@ public class ComparisonResult {
                 ", mismatchingReplicationFactor=" + mismatchingReplicationFactor +
                 ", mismatchingPartitionCount=" + mismatchingPartitionCount +
                 ", mismatchingConfiguration=" + mismatchingConfiguration +
+                ", configEvaluationExceptions=" + configEvaluationExceptions +
                 '}';
     }
 
@@ -98,10 +121,12 @@ public class ComparisonResult {
 
 
     public static class ComparisonResultBuilder {
-        private Set<String> missingTopics = new HashSet<>();
-        private Map<String, ComparisonResult.Comparison<Integer>> mismatchingReplicationFactor = new HashMap<>();
-        private Map<String, ComparisonResult.Comparison<Integer>> mismatchingPartitionCount = new HashMap<>();
-        private Map<String, Collection<ComparisonResult.Comparison<String>>> mismatchingConfiguration = new HashMap<>();
+        private final Set<String> missingTopics = new HashSet<>();
+        private final Map<String, ComparisonResult.Comparison<Integer>> mismatchingReplicationFactor = new HashMap<>();
+        private final Map<String, ComparisonResult.Comparison<Integer>> mismatchingPartitionCount = new HashMap<>();
+        private final Map<String, Collection<ComparisonResult.Comparison<String>>> mismatchingConfiguration = new HashMap<>();
+        private final Map<String, Exception> configEvaluationExceptions = new HashMap<>();
+
 
         public ComparisonResultBuilder addMissingTopic(String missingTopic) {
             missingTopics.add(missingTopic);
@@ -126,8 +151,16 @@ public class ComparisonResult {
             return this;
         }
 
+        public ComparisonResultBuilder addConfigEvaluationException(String topicName, Exception e) {
+
+            this.configEvaluationExceptions.put(topicName, e);
+            return this;
+        }
+
+
+
         public ComparisonResult createComparisonResult() {
-            return new ComparisonResult(missingTopics, mismatchingReplicationFactor, mismatchingPartitionCount, mismatchingConfiguration);
+            return new ComparisonResult(missingTopics, mismatchingReplicationFactor, mismatchingPartitionCount, mismatchingConfiguration, configEvaluationExceptions);
         }
     }
 
