@@ -12,6 +12,8 @@ import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.junit.jupiter.api.*;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -71,6 +73,37 @@ public class KafkaProducerFactoryIntegrationTest {
             Properties props = new Properties();
             props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
             Producer<String, String> producer = KafkaProducerFactory.producer(props, new StringSerializer(), new StringSerializer(), Collections.singleton(expected));
+
+            Future<RecordMetadata> metadataFuture = producer.send(new ProducerRecord<>("test_topic", null, null));
+            producer.flush();
+            metadataFuture.get(5, TimeUnit.SECONDS);
+
+        }
+
+        @Test
+        public void producer_with_map_and_serializer() throws Exception{
+            ExpectedTopicConfiguration expected = new ExpectedTopicConfiguration.ExpectedTopicConfigurationBuilder("test_topic").build();
+
+
+            Producer<String, String> producer = KafkaProducerFactory.producer(Collections.singletonMap(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers), new StringSerializer(), new StringSerializer(), Collections.singleton(expected));
+
+            Future<RecordMetadata> metadataFuture = producer.send(new ProducerRecord<>("test_topic", null, null));
+            producer.flush();
+            metadataFuture.get(5, TimeUnit.SECONDS);
+
+        }
+
+        @Test
+        public void producer_with_map() throws Exception{
+            ExpectedTopicConfiguration expected = new ExpectedTopicConfiguration.ExpectedTopicConfigurationBuilder("test_topic").build();
+
+            Map<String, Object> props = new HashMap<>();
+
+
+            props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+            props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+            props.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+            Producer<String, String> producer = KafkaProducerFactory.producer(props, Collections.singleton(expected));
 
             Future<RecordMetadata> metadataFuture = producer.send(new ProducerRecord<>("test_topic", null, null));
             producer.flush();
