@@ -171,10 +171,27 @@ public class IntegrationTest {
 
             assertAll(() -> assertFalse(result.ok()),
                     () -> assertThat(result.getMismatchingConfiguration().get("test_topic").size(), is(equalTo(2))),
-                    () -> assertThat(result.getMismatchingConfiguration().get("test_topic").stream().peek(System.out::println).filter(comp -> comp.getProperty().equals("cleanup.policy")).findFirst().get().getExpectedValue(), is(equalTo("compact"))),
+                    () -> assertThat(result.getMismatchingConfiguration().get("test_topic").stream().filter(comp -> comp.getProperty().equals("cleanup.policy")).findFirst().get().getExpectedValue(), is(equalTo("compact"))),
                     () -> assertThat(result.getMismatchingConfiguration().get("test_topic").stream().filter(comp -> comp.getProperty().equals("cleanup.policy")).findFirst().get().getActualValue(), is(equalTo("delete"))),
                     () -> assertThat(result.getMismatchingConfiguration().get("test_topic").stream().filter(comp -> comp.getProperty().equals("compression.type")).findFirst().get().getExpectedValue(), is(equalTo("gzip"))),
                     () -> assertThat(result.getMismatchingConfiguration().get("test_topic").stream().filter(comp -> comp.getProperty().equals("compression.type")).findFirst().get().getActualValue(), is(equalTo("producer")))
+
+            );
+
+
+        }
+
+        @Test
+        public void unknown_config(){
+
+            ExpectedTopicConfiguration expected = new ExpectedTopicConfiguration.ExpectedTopicConfigurationBuilder("test_topic").withConfig("unknown", "config").build();
+
+            ComparisonResult result = unitUnderTest.compare(Collections.singleton(expected));
+
+            assertAll(() -> assertFalse(result.ok()),
+                    () -> assertThat(result.getMismatchingConfiguration().get("test_topic").size(), is(equalTo(1))),
+                    () -> assertThat(result.getMismatchingConfiguration().get("test_topic").stream().findFirst().get().getExpectedValue(), is(equalTo("config"))),
+                    () -> assertThat(result.getMismatchingConfiguration().get("test_topic").stream().findFirst().get().getActualValue(), is(equalTo(null)))
 
             );
 
