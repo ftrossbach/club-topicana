@@ -2,7 +2,7 @@
  * Copyright © 2017 Florian Troßbach (trossbach@gmail.com)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
+ * you may not use this file except in compliance withConfig the License.
  * You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
@@ -16,12 +16,9 @@
 package com.github.ftrossbach.club_topicana.core;
 
 import org.apache.kafka.clients.admin.*;
-import org.apache.kafka.common.KafkaFuture;
-import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigResource;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
-import java.util.stream.Collectors;
 
 
 import static java.util.stream.Collectors.toList;
@@ -61,10 +58,12 @@ public class TopicComparer {
                         try {
                             TopicDescription topicDescription = desc.getValue().get();
                             return Collections.singletonList(topicDescription).stream();
-                        } catch (Exception e) {
+                        } catch (ExecutionException e) {
                             resultBuilder.addMissingTopic(desc.getKey());
 
                             return Collections.<TopicDescription>emptySet().stream();
+                        } catch (InterruptedException e) {
+                            throw new EvaluationException("Exception during adminClient.describeTopics", e);
                         }
                     }).collect(toMap(i -> i.name(), i -> i));
 
@@ -95,7 +94,7 @@ public class TopicComparer {
 
                             res.put(tc.getKey().name(), tc.getValue().get());
                         } catch (InterruptedException | ExecutionException e) {
-                            resultBuilder.addConfigEvaluationException(tc.getKey().name(), e);
+                            throw new EvaluationException("Exception during adminClient.describeConfigs", e);
                         }
                         return res.entrySet().stream();
                     })
@@ -109,17 +108,17 @@ public class TopicComparer {
                     ConfigEntry entry = config.get(prop.getKey());
 
                     if(entry == null) {
-                        resultBuilder.addMismatchingConfiguration(exp.getTopicName(), prop.getValue(), prop.getValue(), null);
+                        resultBuilder.addMismatchingConfiguration(exp.getTopicName(), prop.getKey(), prop.getValue(), null);
                     }
 
                     else if (!prop.getValue().equals(entry.value())) {
-                        resultBuilder.addMismatchingConfiguration(exp.getTopicName(), prop.getValue(), prop.getValue(), entry.value());
+                        resultBuilder.addMismatchingConfiguration(exp.getTopicName(), prop.getKey(), prop.getValue(), entry.value());
                     }
                 });
             });
 
 
-            return resultBuilder.createComparisonResult();
+            return resultBuilder.build();
 
         }
 

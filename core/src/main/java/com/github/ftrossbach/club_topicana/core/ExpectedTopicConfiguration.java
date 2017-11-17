@@ -2,7 +2,7 @@
  * Copyright © 2017 Florian Troßbach (trossbach@gmail.com)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
+ * you may not use this file except in compliance withConfig the License.
  * You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
@@ -18,7 +18,6 @@ package com.github.ftrossbach.club_topicana.core;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Properties;
 
 /**
  * Created by ftr on 10.11.17.
@@ -64,22 +63,22 @@ public class ExpectedTopicConfiguration {
             this.topicName = topicName;
         }
 
-        public ExpectedTopicConfigurationBuilder withPartitionCount(PartitionCount partitions) {
-            this.partitions = partitions;
+        public ExpectedTopicConfigurationBuilder withPartitionCount(int partitions) {
+            this.partitions = PartitionCount.of(partitions);
             return this;
         }
 
-        public ExpectedTopicConfigurationBuilder withReplicationFactor(ReplicationFactor replicationFactor) {
-            this.replicationFactor = replicationFactor;
+        public ExpectedTopicConfigurationBuilder withReplicationFactor(int replicationFactor) {
+            this.replicationFactor = ReplicationFactor.of(replicationFactor);
             return this;
         }
 
-        public ExpectedTopicConfigurationBuilder with(Map<String, String> props) {
+        public ExpectedTopicConfigurationBuilder withConfig(Map<String, String> props) {
             this.props.putAll(props);
             return this;
         }
 
-        public ExpectedTopicConfigurationBuilder with(String key, String value) {
+        public ExpectedTopicConfigurationBuilder withConfig(String key, String value) {
             this.props.put(key, value);
             return this;
         }

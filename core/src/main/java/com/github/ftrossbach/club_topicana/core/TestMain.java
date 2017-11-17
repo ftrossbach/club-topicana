@@ -2,7 +2,7 @@
  * Copyright © 2017 Florian Troßbach (trossbach@gmail.com)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
+ * you may not use this file except in compliance withConfig the License.
  * You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
@@ -20,15 +20,15 @@ import java.util.Collections;
 /**
  * Created by ftr on 10.11.17.
  */
-public class Test {
+public class TestMain {
 
     public static void main(String[] args) {
         TopicComparer topicComparer = new TopicComparer("localhost:9092");
 
         ExpectedTopicConfiguration.ExpectedTopicConfigurationBuilder ac = new ExpectedTopicConfiguration.ExpectedTopicConfigurationBuilder("ac")
-                .withPartitionCount(PartitionCount.of(5))
-                .withReplicationFactor(ReplicationFactor.of(4))
-                .with("hurz", "urz");
+                .withPartitionCount(5)
+                .withReplicationFactor(4)
+                .withConfig("hurz", "urz");
 
         ComparisonResult result = topicComparer.compare(Collections.singleton(ac.build()));
 

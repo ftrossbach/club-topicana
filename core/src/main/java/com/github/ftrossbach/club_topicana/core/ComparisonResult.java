@@ -2,7 +2,7 @@
  * Copyright © 2017 Florian Troßbach (trossbach@gmail.com)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
+ * you may not use this file except in compliance withConfig the License.
  * You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
@@ -30,18 +30,17 @@ public class ComparisonResult {
 
     private final Map<String, Collection<Comparison<String>>> mismatchingConfiguration;
 
-    private final Map<String, Exception> configEvaluationExceptions;
 
-    private ComparisonResult(Set<String> missingTopics, Map<String, Comparison<Integer>> mismatchingReplicationFactor, Map<String, Comparison<Integer>> mismatchingPartitionCount, Map<String, Collection<Comparison<String>>> mismatchingConfiguration, Map<String, Exception> configEvaluationExceptions) {
+    ComparisonResult(Set<String> missingTopics, Map<String, Comparison<Integer>> mismatchingReplicationFactor, Map<String, Comparison<Integer>> mismatchingPartitionCount, Map<String, Collection<Comparison<String>>> mismatchingConfiguration) {
         this.missingTopics = missingTopics;
         this.mismatchingReplicationFactor = mismatchingReplicationFactor;
         this.mismatchingPartitionCount = mismatchingPartitionCount;
         this.mismatchingConfiguration = mismatchingConfiguration;
-        this.configEvaluationExceptions = configEvaluationExceptions;
+
     }
 
     public boolean ok(){
-        return !(configEvaluationExceptions.isEmpty() ||missingTopics.isEmpty() || mismatchingReplicationFactor.isEmpty() || mismatchingPartitionCount.isEmpty() || mismatchingConfiguration.isEmpty());
+        return missingTopics.isEmpty() && mismatchingReplicationFactor.isEmpty() && mismatchingPartitionCount.isEmpty() && mismatchingConfiguration.isEmpty();
     }
 
     public Set<String> getMissingTopics() {
@@ -60,9 +59,6 @@ public class ComparisonResult {
         return mismatchingConfiguration;
     }
 
-    public Map<String, Exception> getConfigEvaluationExceptions() {
-        return configEvaluationExceptions;
-    }
 
     @Override
     public String toString() {
@@ -71,7 +67,6 @@ public class ComparisonResult {
                 ", mismatchingReplicationFactor=" + mismatchingReplicationFactor +
                 ", mismatchingPartitionCount=" + mismatchingPartitionCount +
                 ", mismatchingConfiguration=" + mismatchingConfiguration +
-                ", configEvaluationExceptions=" + configEvaluationExceptions +
                 '}';
     }
 
@@ -125,7 +120,7 @@ public class ComparisonResult {
         private final Map<String, ComparisonResult.Comparison<Integer>> mismatchingReplicationFactor = new HashMap<>();
         private final Map<String, ComparisonResult.Comparison<Integer>> mismatchingPartitionCount = new HashMap<>();
         private final Map<String, Collection<ComparisonResult.Comparison<String>>> mismatchingConfiguration = new HashMap<>();
-        private final Map<String, Exception> configEvaluationExceptions = new HashMap<>();
+
 
 
         public ComparisonResultBuilder addMissingTopic(String missingTopic) {
@@ -151,16 +146,12 @@ public class ComparisonResult {
             return this;
         }
 
-        public ComparisonResultBuilder addConfigEvaluationException(String topicName, Exception e) {
-
-            this.configEvaluationExceptions.put(topicName, e);
-            return this;
-        }
 
 
 
-        public ComparisonResult createComparisonResult() {
-            return new ComparisonResult(missingTopics, mismatchingReplicationFactor, mismatchingPartitionCount, mismatchingConfiguration, configEvaluationExceptions);
+
+        public ComparisonResult build() {
+            return new ComparisonResult(missingTopics, mismatchingReplicationFactor, mismatchingPartitionCount, mismatchingConfiguration);
         }
     }
 
