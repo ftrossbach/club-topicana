@@ -1,9 +1,6 @@
 package com.github.ftrossbach.club_topicana.kafka_clients;
 
-import com.github.ftrossbach.club_topicana.core.ComparisonResult;
-import com.github.ftrossbach.club_topicana.core.EmbeddedKafka;
-import com.github.ftrossbach.club_topicana.core.ExpectedTopicConfiguration;
-import com.github.ftrossbach.club_topicana.core.TopicComparer;
+import com.github.ftrossbach.club_topicana.core.*;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.NewTopic;
@@ -17,6 +14,9 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class KafkaProducerFactoryIntegrationTest {
 
@@ -108,6 +108,61 @@ public class KafkaProducerFactoryIntegrationTest {
             Future<RecordMetadata> metadataFuture = producer.send(new ProducerRecord<>("test_topic", null, null));
             producer.flush();
             metadataFuture.get(5, TimeUnit.SECONDS);
+
+        }
+
+
+    }
+
+    @Nested
+    class Sad{
+
+        @Test
+        public void producer_with_props() throws Exception{
+            ExpectedTopicConfiguration expected = new ExpectedTopicConfiguration.ExpectedTopicConfigurationBuilder("test_topic").withReplicationFactor(2).build();
+
+            Properties props = new Properties();
+            props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+            props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+            props.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+            assertThrows(MismatchedTopicConfigException.class, () -> KafkaProducerFactory.producer(props, Collections.singleton(expected)) );
+
+
+        }
+
+
+        @Test
+        public void producer_with_props_and_serializer() throws Exception{
+            ExpectedTopicConfiguration expected = new ExpectedTopicConfiguration.ExpectedTopicConfigurationBuilder("test_topic").withReplicationFactor(2).build();
+
+            Properties props = new Properties();
+            props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+            assertThrows(MismatchedTopicConfigException.class, () -> KafkaProducerFactory.producer(props, new StringSerializer(), new StringSerializer(), Collections.singleton(expected)) );
+
+
+        }
+
+        @Test
+        public void producer_with_map_and_serializer() throws Exception{
+            ExpectedTopicConfiguration expected = new ExpectedTopicConfiguration.ExpectedTopicConfigurationBuilder("test_topic").withReplicationFactor(2).build();
+
+
+            assertThrows(MismatchedTopicConfigException.class, () -> KafkaProducerFactory.producer(Collections.singletonMap(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers), new StringSerializer(), new StringSerializer(), Collections.singleton(expected)));
+        }
+
+        @Test
+        public void producer_with_map() throws Exception{
+            ExpectedTopicConfiguration expected = new ExpectedTopicConfiguration.ExpectedTopicConfigurationBuilder("test_topic").withReplicationFactor(2).build();
+
+            Map<String, Object> props = new HashMap<>();
+
+
+            props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+            props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+            props.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+
+            assertThrows(MismatchedTopicConfigException.class, () -> KafkaProducerFactory.producer(props, Collections.singleton(expected)));
+
 
         }
 
