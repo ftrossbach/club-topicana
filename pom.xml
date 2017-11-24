@@ -27,6 +27,7 @@
     <modules>
         <module>core</module>
         <module>kafka-clients</module>
+        <module>kafka-streams</module>
     </modules>
     <packaging>pom</packaging>
 

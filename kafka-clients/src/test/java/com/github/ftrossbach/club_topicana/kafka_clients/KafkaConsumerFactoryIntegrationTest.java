@@ -213,7 +213,7 @@ public class KafkaConsumerFactoryIntegrationTest {
         }
 
         @Test
-        public void producer_with_map() throws Exception{
+        public void consumer_with_map() throws Exception{
             ExpectedTopicConfiguration expected = new ExpectedTopicConfiguration.ExpectedTopicConfigurationBuilder("test_topic").withReplicationFactor(2).build();
 
             Map<String, Object> props = new HashMap<>();
