@@ -1,0 +1,5 @@
+- name: hurz
+  replication-factor: 1
+  broker-count: 2
+  config:
+    - deletion.policy: compact
