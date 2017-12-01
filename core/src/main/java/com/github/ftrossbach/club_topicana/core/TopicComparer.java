@@ -49,6 +49,8 @@ public class TopicComparer {
             List<String> topicNames = expectedTopicConfiguration.stream()
                     .map((expectedTopic) -> expectedTopic.getTopicName()).collect(toList());
 
+            DescribeTopicsResult describeTopicsResult = adminClient.describeTopics(topicNames);
+
 
             Map<String, TopicDescription> topicDescriptions = adminClient.describeTopics(topicNames).values().entrySet().stream()
                     .flatMap(desc -> {
@@ -82,6 +84,8 @@ public class TopicComparer {
                 }
 
             });
+
+            DescribeConfigsResult configs = adminClient.describeConfigs(Collections.singleton(new ConfigResource(ConfigResource.Type.TOPIC, "topic_name")));
 
             Map<String, Config> topicConfigs = adminClient.describeConfigs(topicNames.stream().map(this::topicNameToResource).collect(toList())).values().entrySet().stream()
 

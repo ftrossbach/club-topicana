@@ -112,6 +112,26 @@ builder.<String, String>table("test_topic").groupBy((key, value) -> new KeyValue
 KafkaStreams streams = KafkaStreamsFactory.streams(builder.build(), new StreamsConfig(props), Collections.singleton(expected));
 ```
 
+For Kafka producers and consumers, you may depend on
+
+```
+<dependency>
+    <groupId>com.github.ftrossbach</groupId>
+    <artifactId>club-topicana-kafka-clients</artifactId>
+    <version>0.1.0</version>
+</dependency>
+```
+
+For Kafka Streams, you may use
+
+```
+<dependency>
+    <groupId>com.github.ftrossbach</groupId>
+    <artifactId>club-topicana-kafka-streams</artifactId>
+    <version>0.1.0</version>
+</dependency>
+```
+
 
 ## Spring
 
@@ -137,3 +157,12 @@ These are the configuration options:
 |club-topicana.fail-on-mismatch:false         |Yes       |true                            |
 
 
+You can include it in your project by adding
+
+```
+<dependency>
+    <groupId>com.github.ftrossbach</groupId>
+    <artifactId>club-topicana-spring</artifactId>
+    <version>0.1.0</version>
+</dependency>
+```
