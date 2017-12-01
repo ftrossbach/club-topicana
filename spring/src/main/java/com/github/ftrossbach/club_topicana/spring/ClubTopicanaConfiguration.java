@@ -10,39 +10,60 @@ import org.yaml.snakeyaml.Yaml;
 import java.util.List;
 import java.util.Map;
 
+
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
+
 @Configuration
 public class ClubTopicanaConfiguration {
 
     @Value("${club-topicana.bootstrap-servers}")
     private String bootstrapServers;
 
+    @Value("${club-topicana.config-file:club-topicana.yml}")
+    private String configFile;
 
     @Bean
-    public ComparisonResult result(){
+    public ComparisonResult clubTopicanaComparisonResult(){
 
-        List<Map<String, Object>> map = (List<Map<String, Object>>) new Yaml().load(this.getClass().getClassLoader().getResourceAsStream("club-topicana.yml"));
+        List<Map<String, Object>> map = (List<Map<String, Object>>) new Yaml().load(this.getClass().getClassLoader().getResourceAsStream(configFile));
 
 
-        map.stream().map(entry -> {
+        List<ExpectedTopicConfiguration> expectedConfig = map.stream().map(entry -> {
             ExpectedTopicConfiguration.ExpectedTopicConfigurationBuilder build = new ExpectedTopicConfiguration.ExpectedTopicConfigurationBuilder((String) entry.get("name"));
 
-            if(entry.get("replication-factor") != null){
-                build.withReplicationFactor(Integer.valueOf((String) entry.get("replication-factor")));
+            if (entry.get("replication-factor") != null) {
+                build.withReplicationFactor((Integer) entry.get("replication-factor"));
             }
 
-            if(entry.get("broker-count") != null){
-                build.withReplicationFactor(Integer.valueOf((String) entry.get("broker-count")));
+            if (entry.get("partition-count") != null) {
+                build.withReplicationFactor((Integer) entry.get("partition-count"));
+            }
+
+            if (entry.get("config") != null) {
+                List<Map<String, Object>> config = (List<Map<String, Object>>) entry.get("config");
+
+                config.stream().forEach(configMap -> {
+                    Map<String, String> stringifiedConfig = configMap.entrySet().stream().collect(toMap(Map.Entry::getKey, e -> String.valueOf(e.getValue())));
+                    build.withConfig(stringifiedConfig);
+                });
+
             }
 
 
-            return null;
+            return build.build();
 
-        });
+        }).collect(toList());
 
 
-        System.out.println(map);
-        new TopicComparer(bootstrapServers).compare(null);
-        return null;
+        ComparisonResult result = new TopicComparer(bootstrapServers).compare(expectedConfig);
+        return result;
+    }
+
+
+    @Bean
+    public ComparisonResultEvaluator clubTopicanaEvaluator(){
+        return new ComparisonResultEvaluator(clubTopicanaComparisonResult());
     }
 
 

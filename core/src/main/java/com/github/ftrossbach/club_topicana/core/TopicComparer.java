@@ -40,9 +40,6 @@ public class TopicComparer {
 
         ComparisonResult.ComparisonResultBuilder resultBuilder = new ComparisonResult.ComparisonResultBuilder();
 
-        Map<String, ExpectedTopicConfiguration> expectedMap = expectedTopicConfiguration.stream().collect(toMap(ele -> ele.getTopicName(), ele -> ele));
-
-
         Properties props = new Properties();
         props.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServer);
 
