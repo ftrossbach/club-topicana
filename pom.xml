@@ -21,7 +21,7 @@
 
     <groupId>com.github.ftrossbach</groupId>
     <artifactId>club-topicana</artifactId>
-    <version>0.1.0</version>
+    <version>0.1.1-SNAPSHOT</version>
     <modules>
         <module>core</module>
         <module>kafka-clients</module>
@@ -135,7 +135,7 @@
         <url>https://github.com/ftrossbach/club-topicana</url>
         <connection>scm:git:git://github.com/ftrossbach/club-topicana.git</connection>
         <developerConnection>scm:git:git@github.com:ftrossbach/club-topicana.git</developerConnection>
-        <tag>club-topicana-0.1.0</tag>
+        <tag>HEAD</tag>
     </scm>
 
     <build>
