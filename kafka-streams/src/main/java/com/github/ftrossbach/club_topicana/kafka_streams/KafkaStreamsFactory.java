@@ -22,14 +22,15 @@ import com.github.ftrossbach.club_topicana.core.TopicComparer;
 import org.apache.kafka.streams.KafkaClientSupplier;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.Topology;
+import org.apache.kafka.streams.processor.internals.DefaultKafkaClientSupplier;
 
 import java.util.Collection;
 import java.util.Properties;
 
 public class KafkaStreamsFactory {
 
-    public static KafkaStreams streams(Topology topology, Properties props, Collection<ExpectedTopicConfiguration> expectedTopicConfiguration){
-        return streams(topology, props, expectedTopicConfiguration);
+    public static KafkaStreams streams(Topology topology, Properties config, Collection<ExpectedTopicConfiguration> expectedTopicConfiguration){
+        return streams(topology, config, new DefaultKafkaClientSupplier(), expectedTopicConfiguration);
     }
 
     public static KafkaStreams streams(Topology topology, Properties config, KafkaClientSupplier clientSupplier, Collection<ExpectedTopicConfiguration> expectedTopicConfiguration){
