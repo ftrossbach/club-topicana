@@ -15,14 +15,17 @@
  */
 package com.github.ftrossbach.club_topicana.core;
 
-import org.apache.kafka.clients.admin.*;
-import org.apache.kafka.common.config.ConfigResource;
-import org.junit.jupiter.api.*;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Properties;
+import org.apache.kafka.clients.admin.AdminClient;
+import org.apache.kafka.clients.admin.AdminClientConfig;
+import org.apache.kafka.clients.admin.NewTopic;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 
+import java.util.Collections;
+import java.util.Properties;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -35,6 +38,7 @@ public class MultiBrokerIntegrationTest {
     private static EmbeddedKafka embeddedKafkaCluster = null;
 
     private TopicComparer unitUnderTest;
+    private static Properties props;
 
 
     @BeforeAll
@@ -44,7 +48,7 @@ public class MultiBrokerIntegrationTest {
         embeddedKafkaCluster.start();
         bootstrapServers = embeddedKafkaCluster.bootstrapServers();
 
-        Properties props = new Properties();
+        props = new Properties();
         props.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         try(AdminClient ac = AdminClient.create(props)){
 
@@ -57,7 +61,7 @@ public class MultiBrokerIntegrationTest {
 
     @BeforeEach
     public void setUp(){
-        unitUnderTest = new TopicComparer(bootstrapServers);
+        unitUnderTest = new TopicComparer(props);
     }
 
 

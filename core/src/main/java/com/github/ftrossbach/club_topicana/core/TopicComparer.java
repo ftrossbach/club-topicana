@@ -1,12 +1,12 @@
 /**
  * Copyright © 2017 Florian Troßbach (trossbach@gmail.com)
- *
+ * <p>
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -15,42 +15,51 @@
  */
 package com.github.ftrossbach.club_topicana.core;
 
-import org.apache.kafka.clients.admin.*;
+import org.apache.kafka.clients.admin.AdminClient;
+import org.apache.kafka.clients.admin.Config;
+import org.apache.kafka.clients.admin.ConfigEntry;
+import org.apache.kafka.clients.admin.DescribeConfigsResult;
+import org.apache.kafka.clients.admin.DescribeTopicsResult;
+import org.apache.kafka.clients.admin.TopicDescription;
 import org.apache.kafka.common.config.ConfigResource;
-import java.util.*;
-import java.util.concurrent.ExecutionException;
+import org.apache.kafka.common.errors.UnknownTopicOrPartitionException;
 
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Properties;
+import java.util.concurrent.ExecutionException;
 
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
+
 
 /**
  * Created by ftr on 10.11.17.
  */
 public class TopicComparer {
 
-    private final String bootstrapServer;
+    private final Properties adminClientConfig;
 
-    public TopicComparer(String bootstrapServer) {
-        this.bootstrapServer = bootstrapServer;
+
+    public TopicComparer(Properties adminClientConfig) {
+        this.adminClientConfig = adminClientConfig;
     }
 
 
     public ComparisonResult compare(Collection<ExpectedTopicConfiguration> expectedTopicConfiguration) {
 
-        ComparisonResult.ComparisonResultBuilder resultBuilder = new ComparisonResult.ComparisonResultBuilder();
+        final ComparisonResult.ComparisonResultBuilder resultBuilder = new ComparisonResult.ComparisonResultBuilder();
 
-        Properties props = new Properties();
-        props.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServer);
-
-        try (AdminClient adminClient = AdminClient.create(props)) {
-
+        try (AdminClient adminClient = AdminClient.create(adminClientConfig)) {
 
             List<String> topicNames = expectedTopicConfiguration.stream()
                     .map((expectedTopic) -> expectedTopic.getTopicName()).collect(toList());
 
             DescribeTopicsResult describeTopicsResult = adminClient.describeTopics(topicNames);
-
 
             Map<String, TopicDescription> topicDescriptions = adminClient.describeTopics(topicNames).values().entrySet().stream()
                     .flatMap(desc -> {
@@ -73,29 +82,36 @@ public class TopicComparer {
 
                     .filter(exp -> topicDescriptions.containsKey(exp.getTopicName()))
                     .forEach(exp -> {
-                TopicDescription topicDescription = topicDescriptions.get(exp.getTopicName());
+                        TopicDescription topicDescription = topicDescriptions.get(exp.getTopicName());
 
-                if (exp.getPartitions().isSpecified() && topicDescription.partitions().size() != exp.getPartitions().count()) {
-                    resultBuilder.addMismatchingPartitionCount(exp.getTopicName(), exp.getPartitions().count(), topicDescription.partitions().size());
-                }
-                int repflicationFactor = topicDescription.partitions().stream().findFirst().get().replicas().size();
-                if (exp.getReplicationFactor().isSpecified() && repflicationFactor != exp.getReplicationFactor().count()) {
-                    resultBuilder.addMismatchingReplicationFactor(exp.getTopicName(), exp.getReplicationFactor().count(), repflicationFactor);
-                }
+                        if (exp.getPartitions().isSpecified() && topicDescription.partitions().size() != exp.getPartitions().count()) {
+                            resultBuilder.addMismatchingPartitionCount(exp.getTopicName(), exp.getPartitions().count(),
+                                    topicDescription.partitions().size());
+                        }
+                        int replicationFactor = topicDescription.partitions().stream().findFirst().get().replicas().size();
+                        if (exp.getReplicationFactor().isSpecified() && replicationFactor != exp.getReplicationFactor().count()) {
+                            resultBuilder.addMismatchingReplicationFactor(exp.getTopicName(), exp.getReplicationFactor().count(),
+                                    replicationFactor);
+                        }
 
-            });
+                    });
 
-            DescribeConfigsResult configs = adminClient.describeConfigs(Collections.singleton(new ConfigResource(ConfigResource.Type.TOPIC, "topic_name")));
+            DescribeConfigsResult configs = adminClient.describeConfigs(
+                    Collections.singleton(new ConfigResource(ConfigResource.Type.TOPIC, "topic_name")));
 
-            Map<String, Config> topicConfigs = adminClient.describeConfigs(topicNames.stream().map(this::topicNameToResource).collect(toList())).values().entrySet().stream()
+            Map<String, Optional<Config>> topicConfigs = adminClient.describeConfigs(
+                    topicNames.stream().map(this::topicNameToResource).collect(toList())).values().entrySet().stream()
 
                     .flatMap(tc -> {
-                        Map<String, Config> res = new HashMap<>();
+                        Map<String, Optional<Config>> res = new HashMap<>();
                         try {
-
-                            res.put(tc.getKey().name(), tc.getValue().get());
+                            res.put(tc.getKey().name(), Optional.of(tc.getValue().get()));
                         } catch (InterruptedException | ExecutionException e) {
-                            throw new EvaluationException("Exception during adminClient.describeConfigs", e);
+                            if (e.getCause() instanceof UnknownTopicOrPartitionException) {
+                                res.put(tc.getKey().name(), Optional.empty());
+                            } else {
+                                throw new EvaluationException("Exception during adminClient.describeConfigs", e);
+                            }
                         }
                         return res.entrySet().stream();
                     })
@@ -103,10 +119,10 @@ public class TopicComparer {
 
 
             expectedTopicConfiguration.stream().forEach(exp -> {
-                Config config = topicConfigs.get(exp.getTopicName());
+                Optional<Config> optionalConfig = topicConfigs.get(exp.getTopicName());
 
                 exp.getProps().entrySet().forEach(prop -> {
-                    ConfigEntry entry = config.get(prop.getKey());
+                    ConfigEntry entry = optionalConfig.map(config -> config.get(prop.getKey())).orElse(null);
 
                     if(entry == null) {
                         resultBuilder.addMismatchingConfiguration(exp.getTopicName(), prop.getKey(), prop.getValue(), null);
