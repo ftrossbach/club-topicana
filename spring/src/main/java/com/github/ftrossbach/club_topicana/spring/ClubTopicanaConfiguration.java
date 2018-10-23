@@ -19,13 +19,13 @@ import com.github.ftrossbach.club_topicana.core.ComparisonResult;
 import com.github.ftrossbach.club_topicana.core.ConfigParser;
 import com.github.ftrossbach.club_topicana.core.ExpectedTopicConfiguration;
 import com.github.ftrossbach.club_topicana.core.TopicComparer;
+import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
 import java.util.Collection;
-
-
-import static java.util.stream.Collectors.toMap;
+import java.util.Properties;
 
 @Configuration
 public class ClubTopicanaConfiguration {
@@ -42,7 +42,9 @@ public class ClubTopicanaConfiguration {
 
         Collection<ExpectedTopicConfiguration> expectedConfig = configParser.parseTopicConfiguration(configFile);
 
-        ComparisonResult result = new TopicComparer(bootstrapServers).compare(expectedConfig);
+        Properties props = new Properties();
+        props.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        ComparisonResult result = new TopicComparer(props).compare(expectedConfig);
         return result;
     }
 

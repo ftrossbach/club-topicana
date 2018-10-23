@@ -21,8 +21,8 @@ import com.github.ftrossbach.club_topicana.core.MismatchedTopicConfigException;
 import com.github.ftrossbach.club_topicana.core.TopicComparer;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
-import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.Serializer;
+
 import java.util.Collection;
 import java.util.Map;
 import java.util.Properties;
@@ -46,7 +46,7 @@ public class KafkaProducerFactory {
 
     public static <K,V>  Producer<K,V> producer(Properties properties, Serializer<K> keySerializer, Serializer<V> valueSerializer, Collection<ExpectedTopicConfiguration> expectedTopicConfiguration) throws MismatchedTopicConfigException{
 
-        TopicComparer comparer = new TopicComparer(properties.getProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG));
+        TopicComparer comparer = new TopicComparer(properties);
         ComparisonResult result = comparer.compare(expectedTopicConfiguration);
         if(result.ok()){
             return new KafkaProducer<>(properties, keySerializer, valueSerializer);

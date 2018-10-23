@@ -21,37 +21,41 @@ import com.github.ftrossbach.club_topicana.core.MismatchedTopicConfigException;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.NewTopic;
-import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.clients.consumer.ConsumerRecords;
-import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.Serdes;
-import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
-import org.apache.kafka.streams.*;
+import org.apache.kafka.common.utils.Bytes;
+import org.apache.kafka.streams.KafkaStreams;
+import org.apache.kafka.streams.KeyValue;
+import org.apache.kafka.streams.StreamsBuilder;
+import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.kstream.Materialized;
 import org.apache.kafka.streams.processor.internals.DefaultKafkaClientSupplier;
-import org.apache.kafka.streams.state.QueryableStoreType;
+import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.QueryableStoreTypes;
 import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+
 import java.time.Duration;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Properties;
+import java.util.Set;
+import java.util.UUID;
 
-
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class KafkaStreamsFactoryIntegrationTest {
 
     private static String bootstrapServers = null;
     private static EmbeddedKafka embeddedKafkaCluster = null;
+
+    private static String testTopicName = "test_topic";
 
     @BeforeAll
     public static void initKafka() throws Exception {
@@ -64,7 +68,7 @@ public class KafkaStreamsFactoryIntegrationTest {
         try (AdminClient ac = AdminClient.create(props)) {
 
 
-            NewTopic testTopic = new NewTopic("test_topic", 1, (short) 1);
+            NewTopic testTopic = new NewTopic(testTopicName, 1, (short) 1);
             NewTopic output = new NewTopic("output", 1, (short) 1);
 
             Set<NewTopic> topics = new HashSet<>();
@@ -74,7 +78,7 @@ public class KafkaStreamsFactoryIntegrationTest {
             ac.createTopics(topics).all().get();
 
             KafkaProducer<String, String> producer = new KafkaProducer<>(Collections.singletonMap(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers), new StringSerializer(), new StringSerializer());
-            producer.send(new ProducerRecord<>("test_topic", "key", "value")).get();
+            producer.send(new ProducerRecord<>(testTopicName, "key", "value")).get();
 
         }
     }
@@ -84,7 +88,7 @@ public class KafkaStreamsFactoryIntegrationTest {
 
         @Test
         public void streams_with_props() throws Exception {
-            ExpectedTopicConfiguration expected = new ExpectedTopicConfiguration.ExpectedTopicConfigurationBuilder("test_topic").build();
+            ExpectedTopicConfiguration expected = new ExpectedTopicConfiguration.ExpectedTopicConfigurationBuilder(testTopicName).build();
 
             Properties props = new Properties();
             props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
@@ -94,8 +98,14 @@ public class KafkaStreamsFactoryIntegrationTest {
             props.put(StreamsConfig.CACHE_MAX_BYTES_BUFFERING_CONFIG, "0");
 
 
-            StreamsBuilder builder = new StreamsBuilder();
-            builder.<String, String>table("test_topic").groupBy((key, value) -> new KeyValue<>(key, value)).count("store");
+                        StreamsBuilder builder = new StreamsBuilder();
+            String storeName = "testStore";
+            builder.<String, String>table(testTopicName).groupBy((key, value) -> new KeyValue<>(key, value))
+                    .count(Materialized.<String, Long, KeyValueStore<Bytes, byte[]>>as(storeName)
+                            .withKeySerde(Serdes.String())
+                            .withValueSerde(Serdes.Long())
+                            .withLoggingDisabled()
+                            .withCachingDisabled());
 
             KafkaStreams streams = KafkaStreamsFactory.streams(builder.build(), props, Collections.singleton(expected));
 
@@ -108,7 +118,7 @@ public class KafkaStreamsFactoryIntegrationTest {
 
                     if (streams.state() == KafkaStreams.State.RUNNING) {
                         try {
-                            ReadOnlyKeyValueStore<String, Long> store = streams.store("store", QueryableStoreTypes.<String, Long>keyValueStore());
+                            ReadOnlyKeyValueStore<String, Long> store = streams.store(storeName, QueryableStoreTypes.<String, Long>keyValueStore());
 
                             Long key = store.get("key");
                             if (key != null && key.equals(1L)) {
@@ -131,7 +141,7 @@ public class KafkaStreamsFactoryIntegrationTest {
 
         @Test
         public void streams_with_config() throws Exception {
-            ExpectedTopicConfiguration expected = new ExpectedTopicConfiguration.ExpectedTopicConfigurationBuilder("test_topic").build();
+            ExpectedTopicConfiguration expected = new ExpectedTopicConfiguration.ExpectedTopicConfigurationBuilder(testTopicName).build();
 
             Properties props = new Properties();
             props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
@@ -141,10 +151,16 @@ public class KafkaStreamsFactoryIntegrationTest {
             props.put(StreamsConfig.CACHE_MAX_BYTES_BUFFERING_CONFIG, "0");
 
 
-            StreamsBuilder builder = new StreamsBuilder();
-            builder.<String, String>table("test_topic").groupBy((key, value) -> new KeyValue<>(key, value)).count("store");
+                        StreamsBuilder builder = new StreamsBuilder();
+            String storeName = "testStore";
+            builder.<String, String>table(testTopicName).groupBy((key, value) -> new KeyValue<>(key, value))
+                    .count(Materialized.<String, Long, KeyValueStore<Bytes, byte[]>>as(storeName)
+                            .withKeySerde(Serdes.String())
+                            .withValueSerde(Serdes.Long())
+                            .withLoggingDisabled()
+                            .withCachingDisabled());
 
-            KafkaStreams streams = KafkaStreamsFactory.streams(builder.build(), new StreamsConfig(props), Collections.singleton(expected));
+            KafkaStreams streams = KafkaStreamsFactory.streams(builder.build(), props, Collections.singleton(expected));
 
 
             streams.start();
@@ -155,7 +171,7 @@ public class KafkaStreamsFactoryIntegrationTest {
 
                     if (streams.state() == KafkaStreams.State.RUNNING) {
                         try {
-                            ReadOnlyKeyValueStore<String, Long> store = streams.store("store", QueryableStoreTypes.<String, Long>keyValueStore());
+                            ReadOnlyKeyValueStore<String, Long> store = streams.store(storeName, QueryableStoreTypes.<String, Long>keyValueStore());
 
                             Long key = store.get("key");
                             if (key != null && key.equals(1L)) {
@@ -178,7 +194,7 @@ public class KafkaStreamsFactoryIntegrationTest {
 
         @Test
         public void streams_with_config_and_supplier() throws Exception {
-            ExpectedTopicConfiguration expected = new ExpectedTopicConfiguration.ExpectedTopicConfigurationBuilder("test_topic").build();
+            ExpectedTopicConfiguration expected = new ExpectedTopicConfiguration.ExpectedTopicConfigurationBuilder(testTopicName).build();
 
             Properties props = new Properties();
             props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
@@ -188,10 +204,16 @@ public class KafkaStreamsFactoryIntegrationTest {
             props.put(StreamsConfig.CACHE_MAX_BYTES_BUFFERING_CONFIG, "0");
 
 
-            StreamsBuilder builder = new StreamsBuilder();
-            builder.<String, String>table("test_topic").groupBy((key, value) -> new KeyValue<>(key, value)).count("store");
+                        StreamsBuilder builder = new StreamsBuilder();
+            String storeName = "testStore";
+            builder.<String, String>table(testTopicName).groupBy((key, value) -> new KeyValue<>(key, value))
+                    .count(Materialized.<String, Long, KeyValueStore<Bytes, byte[]>>as(storeName)
+                            .withKeySerde(Serdes.String())
+                            .withValueSerde(Serdes.Long())
+                            .withLoggingDisabled()
+                            .withCachingDisabled());
 
-            KafkaStreams streams = KafkaStreamsFactory.streams(builder.build(), new StreamsConfig(props), new DefaultKafkaClientSupplier(), Collections.singleton(expected));
+            KafkaStreams streams = KafkaStreamsFactory.streams(builder.build(), props, new DefaultKafkaClientSupplier(), Collections.singleton(expected));
 
 
             streams.start();
@@ -202,7 +224,7 @@ public class KafkaStreamsFactoryIntegrationTest {
 
                     if (streams.state() == KafkaStreams.State.RUNNING) {
                         try {
-                            ReadOnlyKeyValueStore<String, Long> store = streams.store("store", QueryableStoreTypes.<String, Long>keyValueStore());
+                            ReadOnlyKeyValueStore<String, Long> store = streams.store(storeName, QueryableStoreTypes.<String, Long>keyValueStore());
 
                             Long key = store.get("key");
                             if (key != null && key.equals(1L)) {
@@ -231,7 +253,7 @@ public class KafkaStreamsFactoryIntegrationTest {
 
         @Test
         public void streams_with_props() throws Exception {
-            ExpectedTopicConfiguration expected = new ExpectedTopicConfiguration.ExpectedTopicConfigurationBuilder("test_topic").withReplicationFactor(2).build();
+            ExpectedTopicConfiguration expected = new ExpectedTopicConfiguration.ExpectedTopicConfigurationBuilder(testTopicName).withReplicationFactor(2).build();
 
             Properties props = new Properties();
             props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
@@ -241,8 +263,14 @@ public class KafkaStreamsFactoryIntegrationTest {
             props.put(StreamsConfig.CACHE_MAX_BYTES_BUFFERING_CONFIG, "0");
 
 
-            StreamsBuilder builder = new StreamsBuilder();
-            builder.<String, String>table("test_topic").groupBy((key, value) -> new KeyValue<>(key, value)).count("store");
+                        StreamsBuilder builder = new StreamsBuilder();
+            String storeName = "testStore";
+            builder.<String, String>table(testTopicName).groupBy((key, value) -> new KeyValue<>(key, value))
+                    .count(Materialized.<String, Long, KeyValueStore<Bytes, byte[]>>as(storeName)
+                            .withKeySerde(Serdes.String())
+                            .withValueSerde(Serdes.Long())
+                            .withLoggingDisabled()
+                            .withCachingDisabled());
 
             assertThrows(MismatchedTopicConfigException.class, () -> KafkaStreamsFactory.streams(builder.build(), props, Collections.singleton(expected)));
 
@@ -252,7 +280,7 @@ public class KafkaStreamsFactoryIntegrationTest {
 
         @Test
         public void consumer_with_props_and_serializer() throws Exception {
-            ExpectedTopicConfiguration expected = new ExpectedTopicConfiguration.ExpectedTopicConfigurationBuilder("test_topic").withReplicationFactor(2).build();
+            ExpectedTopicConfiguration expected = new ExpectedTopicConfiguration.ExpectedTopicConfigurationBuilder(testTopicName).withReplicationFactor(2).build();
 
             Properties props = new Properties();
             props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
@@ -262,17 +290,23 @@ public class KafkaStreamsFactoryIntegrationTest {
             props.put(StreamsConfig.CACHE_MAX_BYTES_BUFFERING_CONFIG, "0");
 
 
-            StreamsBuilder builder = new StreamsBuilder();
-            builder.<String, String>table("test_topic").groupBy((key, value) -> new KeyValue<>(key, value)).count("store");
+                        StreamsBuilder builder = new StreamsBuilder();
+            String storeName = "testStore";
+            builder.<String, String>table(testTopicName).groupBy((key, value) -> new KeyValue<>(key, value))
+                    .count(Materialized.<String, Long, KeyValueStore<Bytes, byte[]>>as(storeName)
+                            .withKeySerde(Serdes.String())
+                            .withValueSerde(Serdes.Long())
+                            .withLoggingDisabled()
+                            .withCachingDisabled());
 
-            assertThrows(MismatchedTopicConfigException.class, () -> KafkaStreamsFactory.streams(builder.build(), new StreamsConfig(props), Collections.singleton(expected)));
+            assertThrows(MismatchedTopicConfigException.class, () -> KafkaStreamsFactory.streams(builder.build(), props, Collections.singleton(expected)));
 
 
         }
 
         @Test
         public void consumer_with_map_and_serializer() throws Exception {
-            ExpectedTopicConfiguration expected = new ExpectedTopicConfiguration.ExpectedTopicConfigurationBuilder("test_topic").withReplicationFactor(2).build();
+            ExpectedTopicConfiguration expected = new ExpectedTopicConfiguration.ExpectedTopicConfigurationBuilder(testTopicName).withReplicationFactor(2).build();
 
             Properties props = new Properties();
             props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
@@ -282,10 +316,16 @@ public class KafkaStreamsFactoryIntegrationTest {
             props.put(StreamsConfig.CACHE_MAX_BYTES_BUFFERING_CONFIG, "0");
 
 
-            StreamsBuilder builder = new StreamsBuilder();
-            builder.<String, String>table("test_topic").groupBy((key, value) -> new KeyValue<>(key, value)).count("store");
+                        StreamsBuilder builder = new StreamsBuilder();
+            String storeName = "testStore";
+            builder.<String, String>table(testTopicName).groupBy((key, value) -> new KeyValue<>(key, value))
+                    .count(Materialized.<String, Long, KeyValueStore<Bytes, byte[]>>as(storeName)
+                            .withKeySerde(Serdes.String())
+                            .withValueSerde(Serdes.Long())
+                            .withLoggingDisabled()
+                            .withCachingDisabled());
 
-            assertThrows(MismatchedTopicConfigException.class, () -> KafkaStreamsFactory.streams(builder.build(), new StreamsConfig(props), new DefaultKafkaClientSupplier(), Collections.singleton(expected)));
+            assertThrows(MismatchedTopicConfigException.class, () -> KafkaStreamsFactory.streams(builder.build(), props, new DefaultKafkaClientSupplier(), Collections.singleton(expected)));
 
         }
 
