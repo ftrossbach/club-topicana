@@ -21,7 +21,7 @@ Stream or a Spring application
 ## Configuration
 
 A YAML config looks like this
-```
+```yaml
 - name: test_topic
   replication-factor: 1
   partition-count: 1
@@ -38,14 +38,14 @@ A YAML config looks like this
 ```
 
 This can be parsed in the following way:
-```
+```scala
 Collection<ExpectedTopicConfiguration> expectedConfig = new ConfigParser().parseTopicConfiguration("classpath-location-of-file");
 ```
 
 
 The programmatic equivalent looks like this:
 
-```
+```scala
 ExpectedTopicConfiguration testTopic = new ExpectedTopicConfiguration.ExpectedTopicConfigurationBuilder("test_topic")
                                       .withReplicationFactor(1)
                                       .withPartitionCount(1)
@@ -58,7 +58,6 @@ ExpectedTopicConfiguration testTopic2 = new ExpectedTopicConfiguration.ExpectedT
                                       .withConfig("compression.type", "producer")
                                       .withConfig("file.delete.delay.ms", "60000")
                                       .build();
-
 ```
 
 Every parameter is optional – if no partition count is specified, Club Topicana assumes you don't care. Config properties
@@ -75,7 +74,7 @@ Examples:
 
 
 Producer:
-```
+```scala
 ExpectedTopicConfiguration expected = new ExpectedTopicConfiguration.ExpectedTopicConfigurationBuilder("test_topic")
                                       .withReplicationFactor(2).build();
 Properties props = new Properties();
@@ -88,7 +87,7 @@ Producer<String,String> producer = KafkaProducerFactory.producer(props, Collecti
 
 Consumer:
 
-```
+```scala
 ExpectedTopicConfiguration expected = new ExpectedTopicConfiguration.ExpectedTopicConfigurationBuilder("test_topic").build();
 
 Properties props = new Properties();
@@ -100,7 +99,7 @@ Consumer<String, String> consumer = KafkaConsumerFactory.consumer(props, new Str
 
 Streams:
 
-```
+```scala
 ExpectedTopicConfiguration expected = new ExpectedTopicConfiguration.ExpectedTopicConfigurationBuilder("test_topic").build();
 
 Properties props = new Properties();
@@ -114,7 +113,7 @@ KafkaStreams streams = KafkaStreamsFactory.streams(builder.build(), new StreamsC
 
 For Kafka producers and consumers, you may depend on
 
-```
+```xml
 <dependency>
     <groupId>com.github.ftrossbach</groupId>
     <artifactId>club-topicana-kafka-clients</artifactId>
@@ -124,7 +123,7 @@ For Kafka producers and consumers, you may depend on
 
 For Kafka Streams, you may use
 
-```
+```xml
 <dependency>
     <groupId>com.github.ftrossbach</groupId>
     <artifactId>club-topicana-kafka-streams</artifactId>
@@ -137,7 +136,7 @@ For Kafka Streams, you may use
 
 For Spring applications, all you need to do is to use the "EnableClubTopicana" annotation:
 
-```
+```java
 @SpringBootApplication
 @EnableClubTopicana
 public class TestApplication {
@@ -159,7 +158,7 @@ These are the configuration options:
 
 You can include it in your project by adding
 
-```
+```xml
 <dependency>
     <groupId>com.github.ftrossbach</groupId>
     <artifactId>club-topicana-spring</artifactId>
