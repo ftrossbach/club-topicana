@@ -33,13 +33,14 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+
 import java.time.Duration;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
+import java.util.UUID;
 
-
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
@@ -95,7 +96,7 @@ public class KafkaConsumerFactoryIntegrationTest {
             assertTimeoutPreemptively(Duration.ofSeconds(10), () -> {
 
                 while(true){
-                    ConsumerRecords<String, String> records = consumer.poll(100);
+                    ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
                     if(! records.isEmpty()) {
                         break;
                     }
@@ -125,7 +126,7 @@ public class KafkaConsumerFactoryIntegrationTest {
             assertTimeoutPreemptively(Duration.ofSeconds(10), () -> {
 
                 while(true){
-                    ConsumerRecords<String, String> records = consumer.poll(100);
+                    ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
                     if(! records.isEmpty()) {
                         break;
                     }
@@ -151,7 +152,7 @@ public class KafkaConsumerFactoryIntegrationTest {
             assertTimeoutPreemptively(Duration.ofSeconds(10), () -> {
 
                 while(true){
-                    ConsumerRecords<String, String> records = consumer.poll(100);
+                    ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
                     if(! records.isEmpty()) {
                         break;
                     }
@@ -177,7 +178,7 @@ public class KafkaConsumerFactoryIntegrationTest {
             assertTimeoutPreemptively(Duration.ofSeconds(10), () -> {
 
                 while(true){
-                    ConsumerRecords<String, String> records = consumer.poll(100);
+                    ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
                     if(! records.isEmpty()) {
                         break;
                     }
